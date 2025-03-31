@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Repositories;
+
+use App\DTO\AbstractInterfaceDTO;
+use App\DTO\Payment\PaymentDTO;
+use App\Models\Payment;
+use Illuminate\Pagination\LengthAwarePaginator;
+
+class PaymentRepository implements PaymentRepositoryInterface
+{
+    public function create(PaymentDTO $dto): Payment
+    {
+        return Payment::create($dto->create());
+    }
+
+    public function update(Payment $payment, AbstractInterfaceDTO $dto): bool
+    {
+        return $payment->update($dto->toArray());
+    }
+
+    public function getAllPayments(): LengthAwarePaginator
+    {
+        return Payment::query()->latest()->paginate();
+    }
+
+    public function findPaymentById(string $id): ?Payment
+    {
+        return Payment::find($id);
+    }
+
+    public function findByGatewayId(string $gatewayId, string $gateway): ?Payment
+    {
+        return Payment::where('gateway_id', $gatewayId)
+            ->where('gateway', $gateway)
+            ->first();
+    }
+
+    public function updateStatus(string $gatewayId, string $status): Payment
+    {
+        return Payment::where('gateway_id', $gatewayId)->update(['status' => $status]);
+    }
+}
