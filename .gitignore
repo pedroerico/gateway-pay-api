@@ -21,6 +21,10 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/.seeded
+/docker/logs/*
+/.db_data
+/.migrated
 
 storage/framework/cache/*
 storage/framework/views/*
