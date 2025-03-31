@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\API;
+
+use App\DTO\Payment\PaymentDTO;
+use App\Exceptions\PaymentException;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Payment\PaymentRequest;
+use App\Http\Resources\PaymentCollectionResource;
+use App\Http\Resources\PaymentResource;
+use App\Services\PaymentService;
+use Symfony\Component\HttpFoundation\Response;
+
+class PaymentController extends Controller
+{
+    public function __construct(
+        protected PaymentService $paymentService,
+    ) {
+    }
+
+    public function index(): Response
+    {
+        $payments = $this->paymentService->getPayments();
+        return response(new PaymentCollectionResource($payments));
+    }
+
+    public function show(string $id): Response
+    {
+        try {
+            $payment = $this->paymentService->getPaymentById($id);
+            return response(new PaymentResource($payment), Response::HTTP_OK);
+        } catch (PaymentException $e) {
+            return response()->json(
+                ['error' => 'Erro ao consultar pagamento : ' . $e->getMessage()],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+    }
+
+    public function store(PaymentRequest $request): Response
+    {
+        $paymentDTO = PaymentDTO::FromRequest($request->validated());
+        $payment = $this->paymentService->create($paymentDTO);
+        return response(new PaymentResource($payment), Response::HTTP_CREATED);
+    }
+}
