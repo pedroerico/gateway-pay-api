@@ -52,9 +52,24 @@ return [
 
     'channels' => [
 
+        'elasticsearch' => [
+            'driver' => 'monolog',
+            'handler' => App\Logging\ElasticsearchHandler::class,
+            'level' => 'debug',
+        ],
+
+        'webhooks' => [
+            'driver' => 'stack',
+            'channels' => ['elasticsearch'],
+            'ignore_exceptions' => false,
+        ],
+
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', env('LOG_STACK', 'single')),
+            'channels' => array_merge(
+                explode(',', env('LOG_STACK', 'single')),
+                ['elasticsearch']
+            ),
             'ignore_exceptions' => false,
         ],
 

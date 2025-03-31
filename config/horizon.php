@@ -201,19 +201,19 @@ return [
         'production' => [
             'supervisor-1' => [
                 'connection' => 'redis',
-                'queue' => ['payments', 'notifications', 'default'],
-                'processes' => 10, // Workers para processar pagamentos
-                'tries' => 3,      // Tentativas antes de falhar
-                'timeout' => 60,    // Tempo máximo por job (segundos)
-                'balance' => 'auto', // Balanceamento dinâmico
+                'queue' => ['payments', 'notifications', 'webhooks', 'default'],
+                'processes' => 10,
+                'tries' => 3,
+                'timeout' => 60,
+                'balance' => 'auto',
             ],
         ],
 
         'local' => [
             'supervisor-1' => [
                 'connection' => 'redis',
-                'queue' => ['payments'],
-                'processes' => 3,  // Menos workers em desenvolvimento
+                'queue' => ['payments', 'webhooks'],
+                'processes' => 3,
                 'tries' => 1,
             ],
         ],
