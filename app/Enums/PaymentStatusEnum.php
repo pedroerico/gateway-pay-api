@@ -30,4 +30,16 @@ enum PaymentStatusEnum: string
             self::REFUNDED => 'Reembolsado',
         };
     }
+
+    public static function fromAsaasGateway(string $status): self
+    {
+        $statusEnum = PaymentGatewayStatusEnum::tryFrom(strtoupper($status));
+        return match($statusEnum) {
+            PaymentGatewayStatusEnum::CONFIRMED, PaymentGatewayStatusEnum::RECEIVED => self::PAID,
+            PaymentGatewayStatusEnum::AUTHORIZED => self::AUTHORIZED,
+            PaymentGatewayStatusEnum::OVERDUE => self::OVERDUE,
+            PaymentGatewayStatusEnum::REFUNDED => self::REFUNDED,
+            default => self::PENDING,
+        };
+    }
 }
