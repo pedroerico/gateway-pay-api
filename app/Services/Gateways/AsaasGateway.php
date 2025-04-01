@@ -146,7 +146,14 @@ class AsaasGateway implements PaymentGatewayInterface
                 'status' => $response->status(),
                 'response' => $response->json(),
             ]);
-
+            if (str_starts_with((string)$response->status(), '4')) {
+                throw new GatewayException(
+                    gatewayName: $this->getName(),
+                    message: 'Erro ao processar a requisição no Asaas',
+                    code: $response->status(),
+                    errors: $response->json()['errors'] ?? []
+                );
+            }
             throw new \Exception("Asaas Gateway Error: {$response->status()}");
         }
 
