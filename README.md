@@ -1,66 +1,187 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PerfectPay - API de Pagamentos
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+<div align="center">
+  <img src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
+</div>
 
-## About Laravel
+## 🌟 Visão Geral
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**PerfectPay** é uma API robusta projetada para evoluir para um microserviço de pagamentos escalável, com capacidade para:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Integração com múltiplos gateways de pagamento (atualmente com Asaas)
+- Processamento assíncrono de alta performance
+- Resiliência contra falhas com Circuit Breaker automático
+- Dashboard visual para monitoramento (Horizon + Kibana)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 🚀 Principais Funcionalidades
 
-## Learning Laravel
+### ✅ Implementado
+- **Processamento em filas** (Redis) para alta carga
+- **Circuit Breaker** para alternância automática entre gateways
+- **Webhooks** com processamento assíncrono
+- **Monitoramento**:
+    - Horizon para filas
+    - Kibana para análise de logs
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 🔜 Próximas Implementações
+- **Métricas em tempo real** com Prometheus + Grafana
+- **Sistema de cache** para consultas frequentes
+- **Testes completos** (unitários, integração e carga)
+- **Benchmark** para 1.000+ requisições simultâneas
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## 💻 Frontend Oficial
+Disponível em: [PerfectPay Frontend](https://github.com/pedroerico/perfect-pay)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 📋 Pré-requisitos
 
-## Laravel Sponsors
+- Docker 20.10+
+- Docker Compose 2.0+
+- Git
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## 🚀 Instalação
 
-### Premium Partners
+```bash
+# Clone o repositório
+git clone https://github.com/pedroerico/perfect-pay-api.git
+cd perfect-pay-api
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+# Copie o arquivo de ambiente
+cp .env.example .env
 
-## Contributing
+# Inicie os containers
+docker-compose up -d
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🚀 Instalação [Perfect-Pay Frontend](https://github.com/pedroerico/perfect-pay)
 
-## Code of Conduct
+```bash
+# Clone o repositório
+git clone https://github.com/pedroerico/perfect-pay.git
+cd perfect-pay
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Copie o arquivo de ambiente
+cp .env.example .env
 
-## Security Vulnerabilities
+# Inicie os containers
+docker-compose up -d
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 📡 Endpoints
 
-## License
+### POST `/api/payments`
+Cria um novo pagamento
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+**Exemplo Cartão de Crédito:**
+```json
+{
+  "amount": 17.90,
+  "method": "credit_card",
+  "card": {
+    "number": "4444444444444444",
+    "holder_name": "FULANO DE TAL",
+    "expiry_month": "12",
+    "expiry_year": "2026",
+    "cvv": "123"
+  },
+  "customer": {
+    "name": "Ciclano da Silva",
+    "cpf_cnpj": "05794656388",
+    "email": "ciclano@empresa.com",
+    "postal_code": "60844400",
+    "address_number": "123",
+    "phone": "1198765-4321"
+  }
+}
+```
+**Exemplo para pagamento PIX:**
+```json
+{
+    "amount": 11,
+    "method": "pix"
+}
+```
+**Exemplo para pagamento Boleto:**
+```json
+{
+    "amount": 11,
+    "method": "boleto"
+}
+```
+
+- `GET /api/payments` - Listar pagamentos
+- `GET /api/payments/{id}` - Detalhes do pagamento
+
+### Webhooks
+- `POST /webhooks/asaas` - Receber notificações da Asaas (Necessário configuração no ASAAS)
+
+## 🌐 Acessos Locais
+
+| Serviço  | URL                           | Credenciais     |
+|----------|-------------------------------|-----------------|
+| API      | http://localhost:8080         | -               |
+| Frontend | http://localhost:8000         | -               |
+| Horizon  | http://localhost:8080/horizon | -               |
+| Kibana   | http://localhost:5601         | elastic/elastic |
+| Redis    | http://localhost:6379         | -               |
+| MySQL    | http://localhost:3306         | root/root       |
+
+## ⚙️ Variáveis de Ambiente Importantes
+
+| Variável               | Descrição                                         | Exemplo               |
+|------------------------|---------------------------------------------------|-----------------------|
+| `PAYMENT_USE_QUEUE`    | Ativa/desativa se vai usar filas de processamento | `true`/`false`        |
+| `ASAAS_API_KEY`        | Chave de API da Asaas                             | `a1b2c3d4...`         |
+| `ASAAS_BASE_URL`       | URL da API da Asaas                               | `https://sandbox.asaas.com/api/v3` |
+| `ASAAS_CLIENT_ID`       | Cliente cadastro no asaas para exemplo            | `cus_000006602604`    |
+
+```ini
+# Banco de dados
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=perfectpay
+DB_USERNAME=root
+DB_PASSWORD=root
+
+# Filas
+QUEUE_CONNECTION=redis
+REDIS_HOST=redis
+
+# Asaas
+ASAAS_API_KEY=sua_chave
+ASAAS_BASE_URL=https://sandbox.asaas.com/api/v3
+ASAAS_CLIENT_ID=seu_client_id
+
+# Configurações
+PAYMENT_USE_QUEUE=true
+
+# Gateway
+PAYMENT_GATEWAY_DEFAULT=asaas
+PAYMENT_GATEWAY_FALLBACK=null
+```
+
+## 📊 Monitoramento
+
+### Filas com Horizon
+Acesse `http://localhost:8080/horizon` para monitorar:
+- Jobs pendentes
+- Jobs falhados
+
+Tipos de filas:
+- payments: Processamento principal de pagamentos
+- webhooks: Processamento de callbacks
+
+### Logs com Kibana
+1. Acesse `http://localhost:5601`
+2. Crie um index pattern para `laravel-logs-*`
+3. Filtre por:
+    - `level:ERROR` para erros
+    - `service:payment` para logs de pagamento
+
+## 📄 Desenvolvido
+
+Desenvolvido em 31 de março de 2025.
+
+Desenvolvedor: Pedro Érico.
+Email: pedroerico.desenvolvedor@gmail.com
