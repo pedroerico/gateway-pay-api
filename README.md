@@ -52,6 +52,9 @@ cp .env.example .env
 
 # Inicie os containers
 docker-compose up -d
+
+# rodar migrate
+docker-compose exec app php artisan migrate
 ```
 
 ## 🚀 Instalação [Perfect-Pay Frontend](https://github.com/pedroerico/perfect-pay)
