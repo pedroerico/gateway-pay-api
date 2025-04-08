@@ -1,4 +1,4 @@
-# PerfectPay - API de Pagamentos
+# GatewayPay - API de Pagamentos
 
 <div align="center">
   <img src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" />
@@ -8,7 +8,7 @@
 
 ## 🌟 Visão Geral
 
-**PerfectPay** é uma API robusta projetada para evoluir para um microserviço de pagamentos escalável, com capacidade para:
+**GatewayPay** é uma API robusta projetada para evoluir para um microserviço de pagamentos escalável, com capacidade para:
 
 - Integração com múltiplos gateways de pagamento (atualmente com Asaas)
 - Processamento assíncrono de alta performance
@@ -32,7 +32,7 @@
 - **Benchmark** para 1.000+ requisições simultâneas
 
 ## 💻 Frontend Oficial
-Disponível em: [PerfectPay Frontend](https://github.com/pedroerico/perfect-pay)
+Disponível em: [GatewayPay Frontend](https://github.com/pedroerico/gateway-pay)
 
 ## 📋 Pré-requisitos
 
@@ -44,8 +44,8 @@ Disponível em: [PerfectPay Frontend](https://github.com/pedroerico/perfect-pay)
 
 ```bash
 # Clone o repositório
-git clone https://github.com/pedroerico/perfect-pay-api.git
-cd perfect-pay-api
+git clone https://github.com/pedroerico/gateway-pay-api.git
+cd gateway-pay-api
 
 # Copie o arquivo de ambiente
 cp .env.example .env
@@ -57,12 +57,12 @@ docker-compose up -d
 docker-compose exec app php artisan migrate
 ```
 
-## 🚀 Instalação [Perfect-Pay Frontend](https://github.com/pedroerico/perfect-pay)
+## 🚀 Instalação [Gateway-Pay Frontend](https://github.com/pedroerico/gateway-pay)
 
 ```bash
 # Clone o repositório
-git clone https://github.com/pedroerico/perfect-pay.git
-cd perfect-pay
+git clone https://github.com/pedroerico/gateway-pay.git
+cd gateway-pay
 
 # Copie o arquivo de ambiente
 cp .env.example .env
@@ -126,9 +126,7 @@ Cria um novo pagamento
 | API      | http://localhost:8080         | -               |
 | Frontend | http://localhost:8000         | -               |
 | Horizon  | http://localhost:8080/horizon | -               |
-| Kibana   | http://localhost:5601         | elastic/elastic |
-| Redis    | http://localhost:6379         | -               |
-| MySQL    | http://localhost:3306         | root/root       |
+| Kibana   | http://localhost:5601         | -               |
 
 ## ⚙️ Variáveis de Ambiente Importantes
 
