@@ -141,7 +141,7 @@ Cria um novo pagamento
 # Banco de dados
 DB_HOST=mysql
 DB_PORT=3306
-DB_DATABASE=perfectpay
+DB_DATABASE=gatewaypay
 DB_USERNAME=root
 DB_PASSWORD=root
 
