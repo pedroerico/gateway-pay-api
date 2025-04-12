@@ -15,14 +15,14 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignId('gateway_customer_id')->constrained('gateway_customers')->onDelete('cascade');
+            $table->foreignId('api_client_customer_id')->constrained('api_client_customers')->onDelete('cascade');
             $table->decimal('amount', 10, 2);
             $table->enum('method', PaymentMethodEnum::toArray());
             $table->enum('status', PaymentStatusEnum::toArray());
             $table->json('metadata')->nullable();
-            $table->string('client_id')->nullable();
-            $table->string('gateway_id')->nullable();
-            $table->string('gateway')->nullable();
-            $table->json('gateway_response')->nullable();
+            $table->string('external_payment_id')->nullable()->comment('ID do pagamento no gateway externo');
+            $table->json('gateway_response')->nullable()->comment('Resposta completa do gateway');
             $table->json('pix_data')->nullable();
             $table->json('boleto_data')->nullable();
             $table->json('credit_card_data')->nullable();
@@ -33,7 +33,9 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index(['status', 'method']);
-            $table->index('gateway_id');
+            $table->index('external_payment_id');
+            $table->index('gateway_customer_id');
+            $table->index('api_client_customer_id');
         });
     }
 
