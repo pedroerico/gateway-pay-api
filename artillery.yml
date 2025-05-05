@@ -1,0 +1,20 @@
+config:
+  target: "http://localhost:8080"
+  phases:
+    - duration: 60
+      arrivalRate: 17
+  processor: "./test/processors.js"
+
+scenarios:
+  - name: "Create Payment"
+    flow:
+      - post:
+          url: "/api/payments"
+          json:
+            method: "pix"
+            amount: 100.50
+          capture:
+            json: "$.data.id"
+            as: "paymentId"
+      - get:
+          url: "/api/payments/{{ paymentId }}"

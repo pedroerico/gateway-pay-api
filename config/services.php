@@ -34,5 +34,12 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'api_auth' => [
+        'strict_mode' => env('API_AUTH_STRICT_MODE', true),
+    ],
+    'api_key_cache' => [
+        'enabled' => env('API_KEY_CACHE_ENABLED', true),
+        'ttl' => env('API_KEY_CACHE_TTL', 3600),
+    ],
 
 ];

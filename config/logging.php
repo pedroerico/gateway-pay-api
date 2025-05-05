@@ -67,8 +67,8 @@ return [
         'stack' => [
             'driver' => 'stack',
             'channels' => array_merge(
-                explode(',', env('LOG_STACK', 'single')),
-                ['elasticsearch']
+                ['elasticsearch'],
+                explode(',', env('LOG_STACK', 'single'))
             ),
             'ignore_exceptions' => false,
         ],

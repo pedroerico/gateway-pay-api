@@ -11,7 +11,10 @@ use App\Exceptions\PaymentException;
 use App\Exceptions\PaymentGatewayException;
 use App\Exceptions\PaymentProcessingException;
 use App\Jobs\ProcessPayment;
+use App\Models\ApiClient;
+use App\Models\ApiClientCustomer;
 use App\Models\Payment;
+use App\Repositories\ApiClientRepositoryInterface;
 use App\Repositories\PaymentRepositoryInterface;
 use App\Services\Gateways\CircuitBreaker;
 use App\Services\Gateways\GatewayFactory;
@@ -25,15 +28,22 @@ class PaymentService
 
     public function __construct(
         protected PaymentRepositoryInterface $paymentRepository,
+        protected ApiClientRepositoryInterface $apiClientRepository,
+        protected CustomerService $customerService,
+        protected GatewayService $gatewayService,
+        protected ApiClientService $apiClientService,
         protected CircuitBreaker $circuitBreaker,
         protected GatewayFactory $gatewayFactory,
     ) {
         $this->useQueue = env('PAYMENT_USE_QUEUE', true);
     }
 
-    public function create(PaymentDTO $paymentDTO): Payment
+    public function create(PaymentDTO $paymentDTO, ?ApiClient $apiClient): Payment
     {
-        $payment = $this->paymentRepository->create($paymentDTO);
+        if ($apiClient) {
+            $paymentDTO->apiClientCustomer = $this->checkApiClient($paymentDTO, $apiClient);
+        }
+        $payment = $this->paymentRepository->create($paymentDTO->create());
         if ($paymentDTO->method === PaymentMethodEnum::CREDIT_CARD || !$this->useQueue) {
             $gateway = $this->gatewayFactory->createForMethod($paymentDTO->method);
             $this->processPayment($payment, $paymentDTO, $gateway);
@@ -43,29 +53,45 @@ class PaymentService
         return $payment;
     }
 
-    public function getPayments(): LengthAwarePaginator
+    public function checkApiClient(PaymentDTO $paymentDTO, ?ApiClient $apiClient): ?ApiClientCustomer
     {
-        return $this->paymentRepository->getAllPayments();
-    }
+        if (isset($paymentDTO->customer)) {
+            $customer = $this->customerService->create($paymentDTO->customer);
 
-    public function getPaymentById(string $id): ?Payment
-    {
-        $payment = $this->paymentRepository->findPaymentById($id);
-
-        if (!$payment) {
-            throw new PaymentException('Pagamento não encontrado');
+            return $this->apiClientService->firstOrCreateByCustomer(
+                $apiClient,
+                $customer,
+                $paymentDTO->externalId
+            );
         }
-
-        return $payment;
+        $apiClientCustomer = $this->apiClientService->getCustomerByExternalId($apiClient, $paymentDTO->externalId);
+        if ($apiClientCustomer) {
+            return $apiClientCustomer;
+        }
+        throw new PaymentException('Cliente não encontrado');
     }
 
-    public function processPayment(Payment $payment, PaymentDTO $paymentDTO, PaymentGatewayInterface $gateway): Payment
-    {
+    public function processPayment(
+        Payment $payment,
+        PaymentDTO $paymentDTO,
+        PaymentGatewayInterface $gatewayClass
+    ): Payment {
         try {
             if (!$this->circuitBreaker->isAvailable()) {
-                throw new \Exception('Payment gateway is temporarily unavailable');
+                throw new \Exception('O gateway de pagamento está temporariamente indisponível');
             }
-            $response = $gateway->processPayment($paymentDTO);
+
+            $gateway = $this->gatewayService->getGatewayById($gatewayClass->getGatewayId());
+            $customer = $this->customerService->create($paymentDTO->customer);
+            $gatewayCustomer = $this->gatewayService->getGatewayCustomer($gateway, $customer);
+            if (!$gatewayCustomer) {
+                $gatewayCustomerDTO = $gatewayClass->createCustomer($paymentDTO->customer);
+                $gatewayCustomerDTO->setGatewayAndCustomer($gateway, $customer);
+                $paymentDTO->gatewayCustomer = $this->gatewayService->createGatewayCustomer($gatewayCustomerDTO);
+            } else {
+                $paymentDTO->gatewayCustomer = $gatewayCustomer;
+            }
+            $response = $gatewayClass->processPayment($paymentDTO, $payment);
 
             $this->paymentRepository->update($payment, $response);
 
@@ -87,5 +113,21 @@ class PaymentService
                 previous: $e
             );
         }
+    }
+
+    public function getPayments(): LengthAwarePaginator
+    {
+        return $this->paymentRepository->getAllPayments();
+    }
+
+    public function getPaymentById(string $id): ?Payment
+    {
+        $payment = $this->paymentRepository->findPaymentById($id);
+
+        if (!$payment) {
+            throw new PaymentException('Pagamento não encontrado');
+        }
+
+        return $payment;
     }
 }

@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'verify.webhook' => \App\Http\Middleware\VerifyWebhook::class,
+            'api.client' => \App\Http\Middleware\VerifyApiClient::class,
             'circuit.breaker' => \App\Http\Middleware\CircuitBreakerMiddleware::class,
         ]);
     })

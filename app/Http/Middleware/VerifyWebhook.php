@@ -2,29 +2,43 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Gateway;
 use Closure;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class VerifyWebhook
 {
-    public function handle($request, Closure $next)
+    const CACHE_TTL = 3600; // 1 hora
+
+    public function handle($request, Closure $next, $gatewayCode)
     {
-        $validToken = env('WEBHOOK_TOKEN');
-        $receivedToken = $request->header('asaas-access-token') ?? $request->input('authToken');
+        // 1. Obter configuração do gateway com cache
+        $gatewayConfig = Cache::remember(
+            "gateway_webhook_config:{$gatewayCode}",
+            self::CACHE_TTL,
+            function() use ($gatewayCode) {
+                return Gateway::where('code', $gatewayCode)
+                    ->select(['webhook_header', 'webhook_token'])
+                    ->firstOrFail();
+            }
+        );
 
-        Log::channel('webhooks')->debug('Novo - Payload recebido (antes da validação)', [
-            'headers' => $request->headers->all(),
-            'payload_completo' => $request->getContent(),
-            'ip' => $request->ip()
-        ]);
+        // 2. Obter token do header dinâmico
+        $receivedToken = $request->header(
+            strtolower($gatewayConfig->webhook_header)
+        );
 
-        if (!hash_equals((string)$validToken, (string)$receivedToken)) {
-            Log::warning('Tentativa de webhook não autenticada', [
-                'ip' => $request->ip(),
-                'token_recebido' => $receivedToken
-            ]);
-            abort(403, 'Acesso não autorizado');
+        // 3. Verificar autenticação
+        if (!hash_equals((string)$gatewayConfig->webhook_token, (string)$receivedToken)) {
+            abort(403, 'Token de webhook inválido');
         }
+
+        // 4. Adicionar gateway ao request
+        $request->attributes->add([
+            'gateway_code' => $gatewayCode,
+            'gateway_config' => $gatewayConfig
+        ]);
 
         return $next($request);
     }

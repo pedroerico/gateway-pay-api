@@ -13,7 +13,13 @@ class CreditCardDTO extends AbstractDTO
         public string $number,
         public string $expiryMonth,
         public string $expiryYear,
-        public string $cvv
+        public string $cvv,
+        public string $name,
+        public string $email,
+        public string $cpf,
+        public string $postalCode,
+        public string $addressNumber,
+        public string $phone
     ) {
     }
 
@@ -24,6 +30,13 @@ class CreditCardDTO extends AbstractDTO
             number: $data['number'],
             expiryMonth: $data['expiry_month'],
             expiryYear: $data['expiry_year'],
-            cvv: $data['cvv']);
+            cvv: $data['cvv'],
+            name: $data['name'],
+            email: $data['email'],
+            cpf: $data['cpf'],
+            postalCode: $data['postal_code'],
+            addressNumber: $data['address_number'],
+            phone: $data['phone']
+        );
     }
 }

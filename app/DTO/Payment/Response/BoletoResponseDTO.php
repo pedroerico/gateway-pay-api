@@ -10,7 +10,7 @@ class BoletoResponseDTO extends AbstractDTO
 {
     public function __construct(
         public readonly string $url,
-        public readonly string $dueDate,
+        public readonly ?string $dueDate = null,
         public readonly ?string $barcode = null
     ) {
     }

@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\DTO\AbstractInterfaceDTO;
-use App\DTO\Payment\PaymentDTO;
 use App\Models\Payment;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class PaymentRepository implements PaymentRepositoryInterface
 {
-    public function create(PaymentDTO $dto): Payment
+    public function create(AbstractInterfaceDTO $dto): Payment
     {
-        return Payment::create($dto->create());
+        return Payment::create($dto->toArray());
     }
 
     public function update(Payment $payment, AbstractInterfaceDTO $dto): bool

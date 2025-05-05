@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\API;
 
 use App\DTO\Payment\PaymentDTO;
+use App\Events\LogEvent;
 use App\Exceptions\GatewayException;
 use App\Exceptions\PaymentException;
 use App\Http\Controllers\Controller;
@@ -44,7 +45,7 @@ class PaymentController extends Controller
     {
         try {
             $paymentDTO = PaymentDTO::FromRequest($request->validated());
-            $payment = $this->paymentService->create($paymentDTO);
+            $payment = $this->paymentService->create($paymentDTO, $request->attributes->get('api_client'));
             return response(new PaymentResource($payment), Response::HTTP_CREATED);
         } catch (GatewayException $e) {
             return response()->json(
@@ -52,6 +53,7 @@ class PaymentController extends Controller
                 $e->getCode()
             );
         } catch (\Exception $e) {
+            event(new LogEvent($e));
             return response()->json([
                 'message' => 'Erro interno no servidor',
             ], 500);

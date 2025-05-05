@@ -11,7 +11,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 interface PaymentRepositoryInterface
 {
-    public function create(PaymentDTO $dto): Payment;
+    public function create(AbstractInterfaceDTO $dto): Payment;
     public function update(Payment $payment, AbstractInterfaceDTO $dto): bool;
     public function getAllPayments(): LengthAwarePaginator;
     public function findPaymentById(string $id): ?Payment;

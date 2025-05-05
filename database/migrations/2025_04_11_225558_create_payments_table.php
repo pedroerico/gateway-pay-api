@@ -15,11 +15,18 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignId('gateway_customer_id')->constrained('gateway_customers')->onDelete('cascade');
-            $table->foreignId('api_client_customer_id')->constrained('api_client_customers')->onDelete('cascade');
+            $table->foreignId('gateway_customer_id')
+                ->nullable()
+                ->constrained('gateway_customers')
+                ->onDelete('cascade');
+            $table->foreignId('api_client_customer_id')
+                ->nullable()
+                ->constrained('api_client_customers')
+                ->onDelete('cascade');
             $table->decimal('amount', 10, 2);
             $table->enum('method', PaymentMethodEnum::toArray());
             $table->enum('status', PaymentStatusEnum::toArray());
+            $table->text('error_details')->nullable();
             $table->json('metadata')->nullable();
             $table->string('external_payment_id')->nullable()->comment('ID do pagamento no gateway externo');
             $table->json('gateway_response')->nullable()->comment('Resposta completa do gateway');

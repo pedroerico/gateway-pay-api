@@ -2,88 +2,106 @@
 
 namespace App\Services\Gateways;
 
+use App\DTO\Payment\CustomerDTO;
 use App\DTO\Payment\PaymentDTO;
 use App\DTO\Payment\Response\BoletoResponseDTO;
 use App\DTO\Payment\Response\CreditCardResponseDTO;
+use App\DTO\Payment\Response\GatewayCustomerResponseDTO;
 use App\DTO\Payment\Response\PaymentResponseDTO;
 use App\DTO\Payment\Response\PixResponseDTO;
-use App\Enums\PaymentGatewayEnum;
 use App\Enums\PaymentMethodEnum;
 use App\Enums\PaymentStatusEnum;
 use App\Exceptions\GatewayException;
-use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use App\Models\Payment;
 
-class AsaasGateway implements PaymentGatewayInterface
+class AsaasGateway extends BaseGateway
 {
-    private string $status;
-
-    public function __construct(
-        private readonly string $apiKey,
-        private readonly string $baseUrl,
-        private readonly string $clientId
-    ) {
-    }
-
-    public function processPayment(PaymentDTO $paymentDTO): PaymentResponseDTO
+    public function processPayment(PaymentDTO $paymentDTO, Payment $payment): PaymentResponseDTO
     {
-        $paymentData = $this->createPayment($paymentDTO);
-        $this->setStatus($paymentData['status']);
-        $specificParams = match ($paymentDTO->method) {
-            PaymentMethodEnum::PIX => ['pixData' => $this->getPixData($paymentData)],
-            PaymentMethodEnum::BOLETO => ['boletoData' => $this->getBoletoData($paymentData)],
-            PaymentMethodEnum::CREDIT_CARD => ['creditCardData' => $this->getCreditCardData($paymentData, $paymentDTO)],
+        $paymentData = $this->createPayment($paymentDTO, $payment->id);
+        $paymentProcessData = match ($paymentDTO->method) {
+            PaymentMethodEnum::PIX => $this->processPixPayment($paymentData),
+            PaymentMethodEnum::BOLETO => $this->processBoletoPayment($paymentData),
+            PaymentMethodEnum::CREDIT_CARD => $this->processCreditCardPayment($paymentData, $paymentDTO),
             default => throw new GatewayException($this->getName(), 'Método de pagamento não suportado')
         };
-        $baseParams = [
-            'gatewayId' => $paymentData['id'],
-            'gateway' => $this->getName(),
-            'method' => $paymentDTO->method->value,
-            'status' => PaymentStatusEnum::fromAsaasGateway($this->getStatus())->value,
-            'paidAt' => $paymentData['paidDate'] ?? null,
-            'clientId' => $this->clientId,
-            'gatewayResponse' => $paymentData
-        ];
-        return new PaymentResponseDTO(...[...$baseParams, ...$specificParams]);
+        $responseDTO = $this->getResponseDTO($paymentDTO->method, $paymentProcessData);
+        return new PaymentResponseDTO(
+            ...[...$responseDTO],
+            externalPaymentId: $paymentData['id'],
+            method: $paymentDTO->method->value,
+            status: $this->mapStatus($paymentProcessData['status']),
+            paidAt: $paymentProcessData['paidDate'] ?? null,
+            gatewayResponse: $paymentProcessData,
+            gatewayCustomerId: $paymentDTO->gatewayCustomer->id,
+            apiClientCustomerId: $paymentDTO->apiClientCustomer?->id
+        );
     }
 
-    private function createPayment(PaymentDTO $paymentDTO): array
+    public function createCustomer(
+        CustomerDTO $customerDTO,
+        string|int|null $externalReference = null
+    ): GatewayCustomerResponseDTO {
+        $response = $this->makeRequest(
+            'post',
+            'customers',
+            [
+                'name' => $customerDTO->name,
+                'cpfCnpj' => $customerDTO->cpf,
+                'email' => $customerDTO->email,
+                'phone' => $customerDTO->phone,
+                'externalReference' => $externalReference,
+            ]
+        );
+        $responseData = $response->json();
+        return new GatewayCustomerResponseDTO(
+            externalId: $responseData['id'],
+            externalData: $responseData,
+        );
+    }
+
+    private function createPayment(PaymentDTO $paymentDTO, ?string $externalReference = null): array
     {
         $payload = [
-            'customer' => $this->clientId,
+            'customer' => $paymentDTO->gatewayCustomer->external_id,
             'billingType' => $paymentDTO->method->value,
             'value' => $paymentDTO->amount,
             'dueDate' => now()->addDays(3)->format('Y-m-d'),
+            'externalReference' => $externalReference,
         ];
 
-        $response = $this->makeRequest('post', 'payments', $payload);
+        $response = $this->makeRequest(method: 'post', endpoint: 'payments', data: $payload);
         return $response->json();
     }
 
-    private function getPixData(array $paymentData): PixResponseDTO
+    private function processPixPayment(array $paymentData): array
     {
-        $pixResponse = $this->makeRequest(
-            'post',
-            "payments/{$paymentData['id']}/pixQrCode"
+        $response = $this->makeRequest(
+            method: 'post',
+            endpoint: "payments/{$paymentData['id']}/pixQrCode"
         )->json();
 
-        return new PixResponseDTO(
-            encodedImage: $pixResponse['encodedImage'],
-            payload: $pixResponse['payload'],
-            expiresAt: $pixResponse['expirationDate'],
-        );
+        return $response->json();
     }
 
-    private function getBoletoData(array $paymentData): BoletoResponseDTO
+    private function processBoletoPayment(array $paymentData): array
     {
-        return new BoletoResponseDTO(
-            url: $paymentData['bankSlipUrl'],
-            dueDate: $paymentData['dueDate'],
-        );
+        return $paymentData;
     }
 
-    private function getCreditCardData(array $paymentData, PaymentDTO $paymentDTO): CreditCardResponseDTO
+    private function processCreditCardPayment(array $paymentData, PaymentDTO $paymentDTO): array
+    {
+        $payload =  ['creditCardToken' => $this->tokenizeCard($paymentDTO)];
+        $response = $this->makeRequest(
+            method: 'post',
+            endpoint: "payments/{$paymentData['id']}/payWithCreditCard",
+            data: $payload
+        );
+
+        return $response->json();
+    }
+
+    private function tokenizeCard(PaymentDTO $paymentDTO): string
     {
         $creditCard = [
             'holderName' => $paymentDTO->creditCard->holderName,
@@ -92,34 +110,55 @@ class AsaasGateway implements PaymentGatewayInterface
             'expiryYear' => $paymentDTO->creditCard->expiryYear,
             'ccv' => $paymentDTO->creditCard->cvv,
         ];
-
         $customer = [
-            'name' => $paymentDTO->customer->name,
-            'email' => $paymentDTO->customer->email,
-            'cpfCnpj' => $paymentDTO->customer->cpfCnpj,
-            'postalCode' => $paymentDTO->customer->postalCode,
-            'addressNumber' => $paymentDTO->customer->addressNumber,
-            'phone' => $paymentDTO->customer->phone,
+            'name' => $paymentDTO->creditCard->name,
+            'email' => $paymentDTO->creditCard->email,
+            'cpfCnpj' => $paymentDTO->creditCard->cpf,
+            'postalCode' => $paymentDTO->creditCard->postalCode,
+            'addressNumber' => $paymentDTO->creditCard->addressNumber,
+            'phone' => $paymentDTO->creditCard->phone,
         ];
-        $payload = ['creditCard' => $creditCard, 'creditCardHolderInfo' => $customer];
+        $payload = [
+            'customer' => $paymentDTO->gatewayCustomer->external_id,
+            'creditCard' => $creditCard,
+            'creditCardHolderInfo' => $customer
+        ];
 
         $response = $this->makeRequest(
-            'post',
-            "payments/{$paymentData['id']}/payWithCreditCard",
-            $payload
+            method: 'post',
+            endpoint: "creditCard/tokenizeCreditCard",
+            data: $payload
         );
         $responseData = $response->json();
-        $this->setStatus($responseData['status']);
-        return new CreditCardResponseDTO(
-            lastFour: $responseData['creditCard']['creditCardNumber'],
-            brand: $responseData['creditCard']['creditCardBrand'] ?? null,
-            token: $responseData['creditCard']['creditCardToken'],
-        );
+        return $responseData['creditCardToken'];
     }
 
-    public function getName(): string
+    private function getResponseDTO(PaymentMethodEnum $method, array $paymentData): array
     {
-        return PaymentGatewayEnum::ASAAS->value;
+        return match ($method) {
+            PaymentMethodEnum::PIX => [
+                'pixData' => new PixResponseDTO(
+                    encodedImage: $paymentData['encodedImage'],
+                    payload: $paymentData['payload'],
+                    expiresAt: $paymentData['expirationDate'],
+                )
+            ],
+            PaymentMethodEnum::BOLETO => [
+                'boletoData' => new BoletoResponseDTO(
+                    url: $paymentData['bankSlipUrl'],
+                    dueDate: $paymentData['dueDate'],
+                )
+            ],
+
+            PaymentMethodEnum::CREDIT_CARD => [
+                'creditCardData' => new CreditCardResponseDTO(
+                    lastFour: $paymentData['creditCard']['creditCardNumber'],
+                    brand: $paymentData['creditCard']['creditCardBrand'] ?? null,
+                    token: $paymentData['creditCard']['creditCardToken'],
+                )
+            ],
+            default => []
+        };
     }
 
     public function supportsMethod(string $method): bool
@@ -131,42 +170,21 @@ class AsaasGateway implements PaymentGatewayInterface
         ]);
     }
 
-    private function makeRequest(string $method, string $endpoint, array $data = []): Response
+    private function mapStatus(string $status): string
     {
-        $url = "{$this->baseUrl}/{$endpoint}";
-
-        $response = Http::withHeaders([
-            'access_token' => $this->apiKey,
-            'Content-Type' => 'application/json',
-        ])->$method($url, $data);
-
-        if ($response->failed()) {
-            Log::error('Asaas Gateway Error', [
-                'url' => $url,
-                'status' => $response->status(),
-                'response' => $response->json(),
-            ]);
-            if (str_starts_with((string)$response->status(), '4')) {
-                throw new GatewayException(
-                    gatewayName: $this->getName(),
-                    message: 'Erro ao processar a requisição no Asaas',
-                    code: $response->status(),
-                    errors: $response->json()['errors'] ?? []
-                );
-            }
-            throw new \Exception("Asaas Gateway Error: {$response->status()}");
-        }
-
-        return $response;
+        return match ($status) {
+            'CONFIRMED', 'RECEIVED' => PaymentStatusEnum::PAID->value,
+            'AUTHORIZED' => PaymentStatusEnum::AUTHORIZED->value,
+            'OVERDUE' => PaymentStatusEnum::OVERDUE->value,
+            'REFUNDED' => PaymentStatusEnum::REFUNDED->value,
+            default => PaymentStatusEnum::PENDING->value,
+        };
     }
 
-    private function getStatus(): string
+    protected function getDefaultHeaders(): array
     {
-        return $this->status;
-    }
-
-    private function setStatus(string $status): void
-    {
-        $this->status = $status;
+        return array_merge(parent::getDefaultHeaders(), [
+            'access_token' => $this->configDTO->apiKey,
+        ]);
     }
 }

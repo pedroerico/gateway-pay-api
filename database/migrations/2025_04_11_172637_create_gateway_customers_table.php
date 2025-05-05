@@ -16,12 +16,12 @@ return new class extends Migration
 
             $table->foreignUuid('customer_id')->constrained('customers')->onDelete('cascade');
             $table->foreignUuid('gateway_id')->constrained('gateways')->onDelete('cascade');
-            $table->string('gateway_customer_id');
-            $table->json('gateway_data')->nullable();
+            $table->string('external_id');
+            $table->json('external_data')->nullable();
             $table->timestamps();
 
             $table->unique(['customer_id', 'gateway_id']);
-            $table->index('gateway_customer_id');
+            $table->index('external_id');
         });
     }
 

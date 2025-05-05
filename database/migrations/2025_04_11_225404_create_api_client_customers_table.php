@@ -21,6 +21,8 @@ return new class extends Migration
 
             $table->unique(['api_client_id', 'external_id']);
             $table->unique(['customer_id', 'api_client_id']);
+
+            $table->index('external_id');
         });
     }
 
